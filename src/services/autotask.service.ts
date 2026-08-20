@@ -44,7 +44,8 @@ import {
   AutotaskServiceCall,
   AutotaskServiceCallTicket,
   AutotaskServiceCallTicketResource,
-  AutotaskPhase
+  AutotaskPhase,
+  AutotaskKnowledgebaseArticle
 } from '../types/autotask';
 import { McpServerConfig } from '../types/mcp';
 import { Logger } from '../utils/logger';
@@ -2613,6 +2614,84 @@ export class AutotaskService {
       this.logger.info(`Company site configuration ${id} updated successfully`);
     } catch (error) {
       this.logger.error(`Failed to update company site configuration ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // =====================================================
+  // Knowledgebase Articles
+  // =====================================================
+
+  /**
+   * Search knowledgebase articles by title/keywords/error-code text, or list
+   * by category. The list/search endpoint never returns the article body —
+   * only getKnowledgebaseArticle() (which joins ArticlePlainTextContent)
+   * does, since Autotask serves content as a separate per-article resource.
+   */
+  async searchKnowledgebaseArticles(
+    options: AutotaskQueryOptions & { categoryID?: number } = {}
+  ): Promise<AutotaskKnowledgebaseArticle[]> {
+    const http = await this.ensureClient();
+    try {
+      this.logger.debug('Searching knowledgebase articles with options:', options);
+
+      const filters: QueryFilter[] = [];
+      if (options.searchTerm) {
+        filters.push({
+          op: 'or',
+          items: [
+            { op: 'contains', field: 'title', value: options.searchTerm },
+            { op: 'contains', field: 'keywords', value: options.searchTerm },
+            { op: 'contains', field: 'errorCodes', value: options.searchTerm }
+          ]
+        });
+      }
+      if (options.categoryID !== undefined) {
+        filters.push({ op: 'eq', field: 'articleCategoryID', value: options.categoryID });
+      }
+      if (options.isActive !== undefined) {
+        filters.push({ op: 'eq', field: 'isActive', value: options.isActive });
+      }
+
+      const pageSize = Math.min(options.pageSize || 25, 200);
+      const articles = await http.query<AutotaskKnowledgebaseArticle>(
+        'KnowledgeBaseArticles',
+        filters.length > 0 ? filters : MATCH_ALL,
+        { maxRecords: pageSize }
+      );
+
+      this.logger.info(`Retrieved ${articles.length} knowledgebase articles (pageSize ${pageSize})`);
+      return articles;
+    } catch (error) {
+      this.logger.error('Failed to search knowledgebase articles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get one knowledgebase article's metadata AND its plain-text body,
+   * merged into one object — the two are separate Autotask REST resources
+   * (KnowledgeBaseArticles/{id} has no content field; ArticlePlainTextContent/{id}
+   * has only `contentData`), but a caller asking "what does this article say"
+   * wants both in one call.
+   */
+  async getKnowledgebaseArticle(id: number): Promise<AutotaskKnowledgebaseArticle | null> {
+    const http = await this.ensureClient();
+    try {
+      this.logger.debug(`Getting knowledgebase article with ID: ${id}`);
+      const article = await http.get<AutotaskKnowledgebaseArticle>('KnowledgeBaseArticles', id);
+      if (!article) return null;
+      try {
+        const content = await http.get<{ contentData?: string }>('ArticlePlainTextContent', id);
+        if (content?.contentData) article.contentData = content.contentData;
+      } catch (contentError) {
+        // Some articles (e.g. link-only, no body) have no plain-text content
+        // resource — a 404 there shouldn't fail the whole lookup.
+        this.logger.debug(`No plain-text content for article ${id}:`, contentError);
+      }
+      return article;
+    } catch (error) {
+      this.logger.error(`Failed to get knowledgebase article ${id}:`, error);
       throw error;
     }
   }

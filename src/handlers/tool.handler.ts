@@ -1084,6 +1084,16 @@ export class AutotaskToolHandler {
         return { result: r, message: `Autotask ${a.method} ${a.path} completed` };
       }],
 
+      // Knowledgebase
+      ['autotask_search_knowledgebase_articles', async (a) => {
+        const r = await s.searchKnowledgebaseArticles(a);
+        return { result: r, message: `Found ${r.length} knowledgebase article(s)` };
+      }],
+      ['autotask_get_knowledgebase_article', async (a) => {
+        const r = await s.getKnowledgebaseArticle(a.id);
+        return { result: r, message: r ? `Knowledgebase article ${a.id} retrieved` : `Knowledgebase article ${a.id} not found` };
+      }],
+
       // Invoices
       ['autotask_search_invoices', async (a) => {
         const r = await s.searchInvoices(a); return { result: r, message: `Found ${r.length} invoices` };

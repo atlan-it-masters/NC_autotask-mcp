@@ -3153,6 +3153,49 @@ export const TOOL_DEFINITIONS: McpTool[] = [
       },
       required: ['method', 'path']
     }
+  },
+
+  // Knowledgebase tools
+  {
+    name: 'autotask_search_knowledgebase_articles',
+    description: 'Search Autotask knowledgebase articles by title, keywords, or error-code text. Returns summaries only (title, keywords, category) — use autotask_get_knowledgebase_article for the full article body.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        searchTerm: {
+          type: 'string',
+          description: 'Search term matched against title, keywords, and errorCodes'
+        },
+        categoryID: {
+          type: 'number',
+          description: 'Filter by article category ID'
+        },
+        isActive: {
+          type: 'number',
+          description: 'Filter by active status (1=active, 0=inactive)'
+        },
+        pageSize: {
+          type: 'number',
+          description: 'Max 200',
+          minimum: 1,
+          maximum: 200
+        }
+      }
+    }
+  },
+  {
+    name: 'autotask_get_knowledgebase_article',
+    description: 'Get one knowledgebase article by ID, including its full plain-text body (joined from the separate content resource Autotask stores it in).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          description: 'Knowledgebase article ID'
+        }
+      },
+      required: ['id']
+    }
   }
 ];
 
@@ -3204,5 +3247,9 @@ export const TOOL_CATEGORIES: Record<string, { description: string; tools: strin
   service_calls: {
     description: 'Service call dispatching, ticket linking, and resource assignments',
     tools: ['autotask_search_service_calls', 'autotask_get_service_call', 'autotask_create_service_call', 'autotask_update_service_call', 'autotask_delete_service_call', 'autotask_search_service_call_tickets', 'autotask_create_service_call_ticket', 'autotask_delete_service_call_ticket', 'autotask_search_service_call_ticket_resources', 'autotask_create_service_call_ticket_resource', 'autotask_delete_service_call_ticket_resource']
+  },
+  knowledgebase: {
+    description: 'Search knowledgebase articles and read their full content',
+    tools: ['autotask_search_knowledgebase_articles', 'autotask_get_knowledgebase_article']
   }
 };

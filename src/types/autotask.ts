@@ -545,6 +545,25 @@ export interface AutotaskApiSingleResponse<T> {
   item: T;
 }
 
+export interface AutotaskKnowledgebaseArticle {
+  id?: number;
+  title?: string;
+  keywords?: string;
+  errorCodes?: string;
+  articleCategoryID?: number;
+  isActive?: boolean;
+  publish?: number;
+  referenceLink?: string;
+  createdByResourceID?: number;
+  createdDateTime?: string;
+  lastModifiedByResourceID?: number;
+  lastModifiedDateTime?: string;
+  // Joined in from the separate ArticlePlainTextContent/{id} resource by
+  // getKnowledgebaseArticle() — never present on search/list results.
+  contentData?: string;
+  [key: string]: any;
+}
+
 // Filter and query types that match autotask-node structure
 export interface AutotaskQueryOptions {
   filter?: Record<string, any>;
